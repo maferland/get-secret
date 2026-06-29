@@ -111,6 +111,12 @@ Guards:
 - single-use: stores once, then 409s further submits
 - distinct exit codes: `0` stored, `2` timed out, `3` store failure
 
+## Optional hook
+
+Want the agent to reach for keyhole on its own? An opt-in `Stop` hook nudges it
+to use keyhole whenever it tries to ask the user to paste a secret into the
+chat. See [hooks/README.md](hooks/README.md).
+
 ## Security notes
 
 - `keyhole` keeps the value out of the **agent's context** — that is its
