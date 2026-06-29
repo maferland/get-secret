@@ -55,7 +55,7 @@ function main() {
   const reason =
     "You appear to be asking the user to paste a secret into the chat — that puts it " +
     "in your context, the transcript, and any logs. Use keyhole instead: run " +
-    "`keyhole <NAME> --context '<what it is for>'` (or `npx keyhole <NAME>`). It opens a " +
+    "`keyhole <NAME> --context '<what it is for>'` (or `npx @maferland/keyhole <NAME>`). It opens a " +
     "localhost form; the value goes to a store (Keychain/file/env) and you get back only a " +
     "reference (`retrieve`) to expand at runtime. Pass multiple names for several secrets. " +
     "If you were not soliciting a secret, disregard this."

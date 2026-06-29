@@ -1,6 +1,9 @@
 {
-  "name": "keyhole",
+  "name": "@maferland/keyhole",
   "version": "0.2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Hand a secret to your AI coding agent through a localhost form — the value reaches a store by reference and never enters the chat context",
   "type": "module",
   "bin": {

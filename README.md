@@ -32,8 +32,8 @@ claude plugin add github:maferland/keyhole
 As a CLI via npm:
 
 ```bash
-npx keyhole OPENAI_API_KEY --context '...'   # run without installing
-npm install -g keyhole                        # or install once, then: keyhole ...
+npx @maferland/keyhole OPENAI_API_KEY --context '...'   # run without installing
+npm install -g @maferland/keyhole                        # or install once, then: keyhole ...
 ```
 
 From source (contributors):
@@ -49,7 +49,7 @@ keyhole is just a CLI, so any agent that can run shell commands can use it.
 1. Install the CLI so the agent's shell can reach it:
 
    ```bash
-   npm install -g keyhole
+   npm install -g @maferland/keyhole
    ```
 
 2. Teach the agent to prefer it. Codex mirrors Claude — drop a skill into
@@ -154,7 +154,7 @@ chat. See [hooks/README.md](hooks/README.md).
 bun install
 bun run test      # vitest: unit + in-process integration
 bunx tsc --noEmit
-bun run build     # bundle the node CLI to dist/
+bun run build     # rebuild the node bundle at bin/keyhole
 ```
 
 ## Support
