@@ -10,15 +10,16 @@ only references. Ships as a Claude Code plugin (skill + command wrapper).
 - `src/page.ts` — `buildPage` renders the form (single or multi-field)
 - `src/server.ts` — `CaptureSession`: node:http server, request guards, single-use
 - `src/cli.ts` — `parseArgs`, `exitCode`, `main` (argv → session → browser)
-- `src/cli-entry.ts` — runs `main()` then exits; the bundle entry point
-- `bin/keyhole` — Bun source entry for the Claude plugin + local dev
-- `dist/cli.js` — built node bundle (`bun run build`); the npm `bin` (runs on plain node)
+- `src/cli-entry.ts` — runs `main()` then exits; the build entry point
+- `bin/keyhole` — committed node bundle built from `src/` (`bun run build`). The
+  npm `bin`, the plugin entry, and the local CLI all use it. Runs on plain node.
 - `skills/` + `commands/` — Claude Code plugin surface
 - `tests/` — vitest: `stores.test.ts` (unit), `server.test.ts` (in-process integration)
 
-Two runtimes by channel: the Claude plugin runs `bin/keyhole` under Bun (source
-`.ts`); the npm package ships `dist/cli.js` built for node so `npx keyhole`
-needs no Bun. Published from CI on a `v*` tag with npm provenance.
+Consumers only need **node** — `bin/keyhole` is a built bundle, so the npm CLI,
+the Claude/Codex plugin, and `npx keyhole` all run without Bun. Bun is only for
+dev/build/test. **Rebuild `bin/keyhole` after editing `src/`** (`bun run build`);
+CI builds it too. Published from CI on a `v*` tag with npm provenance.
 
 ## Run
 
