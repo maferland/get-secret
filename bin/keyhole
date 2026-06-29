@@ -1,4 +1,414 @@
-#!/usr/bin/env bun
-import { main } from "../src/cli.ts"
+#!/usr/bin/env node
 
-process.exit(await main())
+// src/cli.ts
+import { spawn } from "node:child_process";
+
+// src/server.ts
+import { randomBytes } from "node:crypto";
+import { createServer } from "node:http";
+
+// src/page.ts
+function esc(s) {
+  return s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+var TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>keyhole · {title}</title>
+<style>
+ :root{--bg:#0b0d12;--card:#151a23;--line:#262d3a;--ink:#e8eaee;--mut:#8b93a3;
+   --accent:#5b8cff;--ok:#4ade80;--err:#f87171}
+ *{box-sizing:border-box}
+ body{background:radial-gradient(120% 120% at 50% 0%,#11151d 0%,var(--bg) 60%);
+   color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+   display:flex;min-height:100vh;margin:0;align-items:center;justify-content:center;padding:24px}
+ .card{background:var(--card);border:1px solid var(--line);padding:26px 28px 22px;
+   border-radius:16px;width:460px;box-shadow:0 12px 50px rgba(0,0,0,.55)}
+ .head{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+ .key{width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;
+   background:linear-gradient(160deg,#2a3550,#1b2233);border:1px solid var(--line);font-size:17px}
+ h1{font-size:15px;font-weight:600;margin:0;letter-spacing:.2px}
+ .pill{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);
+   background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.25);
+   padding:1px 7px;border-radius:6px;display:inline-block}
+ .ctx{color:var(--mut);font-size:13px;margin:14px 0 18px;display:-webkit-box;
+   -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .field-row{margin-bottom:14px}
+ .field-row label{display:block;margin:0 0 7px}
+ .field{position:relative}
+ input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+   padding:12px 44px 12px 13px;border-radius:10px;font:14px ui-monospace,Menlo,monospace;outline:none}
+ input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.18)}
+ .eye{position:absolute;right:6px;top:6px;bottom:6px;width:34px;border:0;background:transparent;
+   color:var(--mut);cursor:pointer;font-size:15px;border-radius:7px}
+ .eye:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+ button.go{margin-top:4px;width:100%;background:var(--accent);border:0;color:#fff;
+   padding:12px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.15s}
+ button.go:hover{filter:brightness(1.08)} button.go:disabled{opacity:.55;cursor:default}
+ .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;
+   font-size:12px;color:var(--mut)}
+ .lock{display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
+ .dest{min-width:0;overflow:hidden}
+ .dest code{font:11px ui-monospace,Menlo,monospace;color:var(--mut);display:block;
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .msg{font-size:13px;min-height:18px;margin-top:12px}
+ .msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
+ .done .head{display:none} .done .form{display:none} .done .check{display:flex}
+ .check{display:none;flex-direction:column;align-items:center;gap:12px;padding:30px 0 24px;text-align:center}
+ .check .ring{width:54px;height:54px;border-radius:50%;background:rgba(74,222,128,.12);
+   border:1px solid rgba(74,222,128,.45);display:grid;place-items:center;color:var(--ok);font-size:26px}
+ .check .ctitle{font-size:15px;font-weight:600}
+ .check .csub{font-size:13px;color:var(--mut)}
+</style></head><body>
+<div class=card id=card>
+ <div class=head>
+  <div class=key>\uD83D\uDD11</div>
+  <div><h1>{title}</h1></div>
+ </div>
+ <div class=form id=form>
+  <p class=ctx title="{context}">{context}</p>
+  {fields}
+  <button class=go id=go>{button}</button>
+  <div class=msg id=m></div>
+  <div class=foot>
+   <span class=lock>\uD83D\uDD12 Stays on this machine</span>
+   <span class=dest><code title="{dest}">{dest}</code></span>
+  </div>
+ </div>
+ <div class=check>
+  <div class=ring>✓</div>
+  <div class=ctitle id=ctitle>Secret stored</div>
+  <div class=csub id=csub>Closing this tab…</div>
+ </div>
+</div>
+<script>
+ const go=document.getElementById('go'),m=document.getElementById('m'),
+       card=document.getElementById('card'),
+       fields=[...document.querySelectorAll('input[data-name]')];
+ document.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{
+   const f=document.getElementById(b.dataset.for),p=f.type==='password';
+   f.type=p?'text':'password';b.textContent=p?'\uD83D\uDE48':'\uD83D\uDC41';f.focus();});
+ function msg(cls,text){m.className='msg'+(cls?' '+cls:'');m.textContent=text;}
+ function finish(){
+   card.classList.add('done');
+   document.getElementById('ctitle').textContent=fields.length>1?fields.length+' secrets stored':'Secret stored';
+   const sub=document.getElementById('csub');let left=3;
+   (function tick(){
+     if(left<=0){window.close();setTimeout(()=>{sub.textContent='You can close this tab.';},300);return;}
+     sub.textContent='Closing in '+left+'…';left--;setTimeout(tick,1000);
+   })();
+ }
+ async function send(){
+   if(fields.some(f=>!f.value)){msg('err','Fill every field first.');fields.find(f=>!f.value).focus();return;}
+   go.disabled=true;msg('','Storing…');
+   const secrets={};fields.forEach(f=>secrets[f.dataset.name]=f.value);
+   try{
+     const r=await fetch('{token}/submit',{method:'POST',
+       headers:{'content-type':'application/json'},body:JSON.stringify({secrets})});
+     if(r.ok){fields.forEach(f=>f.value='');finish();}
+     else{msg('err','Store failed: '+await r.text());go.disabled=false;}
+   }catch(e){msg('err','Error: '+e);go.disabled=false;}
+ }
+ go.onclick=send;
+ fields.forEach(f=>f.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();send();}}));
+</script></body></html>`;
+function buildPage(names, context, dest, token) {
+  const multi = names.length > 1;
+  const title = multi ? `Provide ${names.length} secrets` : "Provide a secret";
+  const ctx = context || (multi ? "Fill each field, then store them all." : "Paste or type the secret, then store.");
+  const fields = names.map((name, i) => `<div class=field-row>
+    <label for="s${i}"><span class=pill>${esc(name)}</span></label>
+    <div class=field>
+     <input id="s${i}" data-name="${esc(name)}" type=password autocomplete=off autocapitalize=off
+       autocorrect=off spellcheck=false placeholder="Paste or type…"${i === 0 ? " autofocus" : ""}>
+     <button class=eye type=button data-for="s${i}" title="Show / hide" aria-label="Toggle visibility">\uD83D\uDC41</button>
+    </div>
+   </div>`).join(`
+  `);
+  return TEMPLATE.replaceAll("{title}", esc(title)).replaceAll("{context}", esc(ctx)).replaceAll("{fields}", fields).replaceAll("{button}", multi ? "Store secrets" : "Store secret").replaceAll("{dest}", esc(dest)).replaceAll("{token}", token);
+}
+
+// src/stores.ts
+import { spawnSync } from "node:child_process";
+import {
+  closeSync,
+  constants as FS,
+  existsSync,
+  fchmodSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  writeSync
+} from "node:fs";
+import { homedir, userInfo } from "node:os";
+import { dirname } from "node:path";
+
+class ValidationError extends Error {
+}
+var ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+var defaultRunner = (cmd, args) => {
+  const r = spawnSync(cmd, args, { encoding: "utf8" });
+  return { status: r.status, stderr: r.stderr ?? "" };
+};
+function storeKeychain(name, service, value, run = defaultRunner) {
+  const account = userInfo().username;
+  const r = run("security", [
+    "add-generic-password",
+    "-U",
+    "-a",
+    account,
+    "-s",
+    service,
+    "-w",
+    value
+  ]);
+  if (r.status !== 0)
+    throw new Error(`keychain store failed (security exit ${r.status})`);
+  return `security find-generic-password -s ${service} -a ${account} -w`;
+}
+function expandHome(path) {
+  return path.startsWith("~/") ? homedir() + path.slice(1) : path;
+}
+function open0600(path) {
+  const fd = openSync(path, FS.O_WRONLY | FS.O_CREAT | FS.O_TRUNC | FS.O_NOFOLLOW, 384);
+  fchmodSync(fd, 384);
+  return fd;
+}
+function storeFile(path, value) {
+  path = expandHome(path);
+  mkdirSync(dirname(path) || ".", { recursive: true });
+  const fd = open0600(path);
+  writeSync(fd, value);
+  closeSync(fd);
+  return path;
+}
+function storeEnv(name, path, value) {
+  if (!ENV_NAME.test(name))
+    throw new ValidationError(`env: invalid variable name '${name}'`);
+  if (/[\n\r]/.test(value))
+    throw new ValidationError("env: cannot store a value containing newlines");
+  path = expandHome(path);
+  mkdirSync(dirname(path) || ".", { recursive: true });
+  let existing = "";
+  if (existsSync(path)) {
+    existing = readFileSync(path, "utf8").split(`
+`).filter(Boolean).filter((line) => line.split("=", 1)[0] !== name).map((line) => line + `
+`).join("");
+  }
+  const fd = open0600(path);
+  writeSync(fd, existing + `${name}=${value}
+`);
+  closeSync(fd);
+  return `set -a; source ${path}; set +a   # then \${${name}}`;
+}
+function keychainService(name, dest) {
+  const idx = dest.indexOf(":");
+  return idx === -1 ? name : dest.slice(idx + 1);
+}
+function dispatchStore(name, dest, value) {
+  if (dest === "keychain" || dest.startsWith("keychain:")) {
+    const service = keychainService(name, dest);
+    return { label: `keychain:${service}`, retrieve: storeKeychain(name, service, value) };
+  }
+  if (dest.startsWith("file:"))
+    return { label: dest, retrieve: storeFile(dest.slice(5), value) };
+  if (dest.startsWith("env:"))
+    return { label: dest, retrieve: storeEnv(name, dest.slice(4), value) };
+  throw new ValidationError(`unknown --dest: '${dest}'`);
+}
+
+// src/server.ts
+class CaptureSession {
+  opts;
+  token = "/" + randomBytes(18).toString("base64url");
+  result = {};
+  done;
+  settled = false;
+  page;
+  server;
+  resolveDone;
+  constructor(opts) {
+    this.opts = opts;
+    this.page = buildPage(opts.names, opts.context ?? "", opts.dest, this.token);
+    this.done = new Promise((resolve) => this.resolveDone = resolve);
+    this.server = createServer((req, res) => this.handle(req, res));
+  }
+  listen() {
+    return new Promise((resolve, reject) => {
+      this.server.once("error", reject);
+      this.server.listen(this.opts.port ?? 0, "127.0.0.1", () => resolve(this));
+    });
+  }
+  get port() {
+    const addr = this.server.address();
+    return typeof addr === "object" && addr ? addr.port : 0;
+  }
+  get url() {
+    return `http://127.0.0.1:${this.port}${this.token}`;
+  }
+  async wait(timeoutMs) {
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(this.result), timeoutMs));
+    return Promise.race([this.done, timeout]);
+  }
+  close() {
+    this.server.close();
+  }
+  loopback(scheme = "") {
+    return [`${scheme}127.0.0.1:${this.port}`, `${scheme}localhost:${this.port}`];
+  }
+  async handle(req, res) {
+    const path = req.url ?? "";
+    if (req.method === "GET") {
+      if (path !== this.token)
+        return reply(res, 404);
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(this.page);
+      return;
+    }
+    if (req.method !== "POST" || path !== this.token + "/submit")
+      return reply(res, 404);
+    if (!this.loopback().includes(req.headers.host ?? ""))
+      return reply(res, 403);
+    const origin = req.headers.origin;
+    if (origin && !this.loopback("http://").includes(origin))
+      return reply(res, 403);
+    if (this.settled)
+      return reply(res, 409, "already stored");
+    if (req.headers["content-length"] == null)
+      return reply(res, 411, "length required");
+    let values;
+    try {
+      values = JSON.parse(await readBody(req)).secrets ?? {};
+    } catch {
+      return reply(res, 400, "bad body");
+    }
+    for (const name of this.opts.names) {
+      if (!values[name])
+        return reply(res, 400, `empty value for ${name}`);
+    }
+    try {
+      const secrets = this.opts.names.map((name) => {
+        const { label, retrieve } = dispatchStore(name, this.opts.dest, values[name]);
+        return { name, dest: label, retrieve };
+      });
+      this.settled = true;
+      this.result.stored = true;
+      this.result.secrets = secrets;
+      this.resolveDone(this.result);
+      reply(res, 200, "ok");
+    } catch (e) {
+      if (e instanceof ValidationError)
+        return reply(res, 400, e.message);
+      this.result.error = e.message;
+      this.settled = true;
+      this.resolveDone(this.result);
+      reply(res, 500, "store error");
+    }
+  }
+}
+function reply(res, code, body = "") {
+  res.writeHead(code);
+  res.end(body);
+}
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => data += chunk);
+    req.on("end", () => resolve(data));
+    req.on("error", reject);
+  });
+}
+
+// src/cli.ts
+var HELP = `usage: keyhole <name>... [--dest DEST] [--context TEXT] [--port N] [--timeout S]
+
+Capture one or more secrets via a localhost form. The values reach the store by
+reference and never touch stdout. Pass several names for a multi-field form.
+
+DEST (default: keychain):
+  keychain[:service]   macOS Keychain generic password (account = $USER)
+  file:/path           write the raw secret to /path with 0600 perms (single secret)
+  env:/path            append/replace NAME=value lines in an env file (0600)
+
+stdout on success (one JSON line):
+  {"stored":true,"secrets":[{"name","dest","retrieve"}, ...]}`;
+function parseArgs(argv) {
+  const names = [];
+  const args = { names, dest: "keychain", context: "", port: 0, timeout: 300 };
+  for (let i = 0;i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--dest")
+      args.dest = argv[++i];
+    else if (a === "--context")
+      args.context = argv[++i];
+    else if (a === "--port")
+      args.port = Number(argv[++i]);
+    else if (a === "--timeout")
+      args.timeout = Number(argv[++i]);
+    else if (a === "-h" || a === "--help") {
+      process.stdout.write(HELP + `
+`);
+      process.exit(0);
+    } else if (a.startsWith("-"))
+      throw new Error(`unknown option: ${a}`);
+    else
+      names.push(a);
+  }
+  if (names.length === 0)
+    throw new Error("need at least one secret name");
+  if (args.dest.startsWith("file:") && names.length > 1) {
+    throw new Error("file: stores a single secret — use keychain (default) or env: for multiple");
+  }
+  return args;
+}
+function log(msg) {
+  process.stderr.write(msg + `
+`);
+}
+function openBrowser(url) {
+  if (process.env.BROWSER === "true")
+    return;
+  const cmd = process.platform === "darwin" ? "open" : "xdg-open";
+  try {
+    spawn(cmd, [url], { stdio: "ignore", detached: true }).unref();
+  } catch {}
+}
+function exitCode(result) {
+  if (result.stored)
+    return 0;
+  if (result.error)
+    return 3;
+  return 2;
+}
+async function main(argv = process.argv.slice(2)) {
+  let args;
+  try {
+    args = parseArgs(argv);
+  } catch (e) {
+    log(`keyhole: ${e.message}`);
+    return 2;
+  }
+  let session;
+  try {
+    session = await new CaptureSession(args).listen();
+  } catch (e) {
+    log(`keyhole: cannot bind port ${args.port || "<random>"}: ${e.message}`);
+    return 3;
+  }
+  log(`keyhole: open ${session.url}`);
+  log(`  ${args.names.join(", ")}  dest=${args.dest}  (waiting up to ${args.timeout}s)`);
+  openBrowser(session.url);
+  const result = await session.wait(args.timeout * 1000);
+  session.close();
+  const code = exitCode(result);
+  if (code === 0)
+    process.stdout.write(JSON.stringify(result) + `
+`);
+  else if (code === 3)
+    log(`keyhole: store failed: ${result.error}`);
+  else
+    log("keyhole: timed out, nothing stored");
+  return code;
+}
+
+// src/cli-entry.ts
+main().then((code) => process.exit(code));

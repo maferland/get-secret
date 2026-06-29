@@ -4,15 +4,15 @@
   "description": "Hand a secret to your AI coding agent through a localhost form — the value reaches a store by reference and never enters the chat context",
   "type": "module",
   "bin": {
-    "keyhole": "dist/cli.js"
+    "keyhole": "bin/keyhole"
   },
   "files": [
-    "dist",
+    "bin/keyhole",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build src/cli-entry.ts --target node --outfile dist/cli.js --banner \"#!/usr/bin/env node\" && chmod +x dist/cli.js",
+    "build": "bun build src/cli-entry.ts --target node --outfile bin/keyhole --banner \"#!/usr/bin/env node\" && chmod +x bin/keyhole",
     "prepublishOnly": "bun run build",
     "test": "vitest run",
     "format": "prettier --write .",

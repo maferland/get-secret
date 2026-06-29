@@ -18,7 +18,7 @@ The agent gets back **only a reference** — never the value.
 
 ## Prerequisites
 
-- Node 18+ to run the CLI (`npx keyhole`). The Claude Code plugin runs under [Bun](https://bun.sh).
+- Node 18+ — the CLI and the Claude/Codex plugin all run on node. [Bun](https://bun.sh) is only needed to develop or build from source.
 - macOS for the `keychain` destination; `file:`/`env:` work anywhere.
 
 ## Install
