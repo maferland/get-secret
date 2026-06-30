@@ -158,22 +158,22 @@ const TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
    const list=multi?fields.map(f=>'<span class=ac>'+f.dataset.name+'</span>').join('\\n'):'';
    const heading=multi?fields.length+' secrets stored.':'Secret stored.';
    dead('ok','✓',heading,
-     'Stored to <span class=ac>'+dest+'</span>.\\nYour agent is unblocked and running.'+(list?'\\n'+list:''),
-     'The value never entered the agent\\'s context. You can close this tab.');
+     'Stored to <span class=ac>'+dest+'</span>.\\nYour agent has what it needs.'+(list?'\\n'+list:''),
+     'The value never touched the agent\\'s context. You can close this tab.');
  }
  function already(){
    dead('lock','🔒','Already submitted.',
-     'This form has already been used. The secret was stored and the agent is running.',
+     'You already submitted this form. The secret is stored and the agent is running.',
      'If you think this is wrong, restart the <code>keyhole</code> command in your terminal.');
  }
  function timedOut(){
-   dead('time','⌛','Session expired.',
-     'The agent timed out waiting for the secret. The server has shut down.',
-     'Run the command again to open a new form. Default timeout: 300 s (--timeout flag).');
+   dead('time','⌛','Timed out.',
+     'The agent stopped waiting. The local server is gone.',
+     'Run the command again to get a fresh form. Default is 300 s; pass --timeout to change it.');
  }
  function showError(text){
    card.classList.remove('busy');card.classList.add('err-state');
-   errtxt.textContent=text||'Failed to store — check permissions, or switch to a different destination.';
+   errtxt.textContent=text||'Failed to store. Check permissions, or try a different destination.';
    go.disabled=false;go.textContent=multi?'Store all →':'Try again →';
  }
  async function send(){
