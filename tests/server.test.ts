@@ -69,7 +69,7 @@ describe("GET form", () => {
     const s = await start(["API_KEY"], `file:${join(tmp(), "o")}`)
     const r = await raw(s.port, { path: s.token })
     expect(r.status).toBe(200)
-    expect(r.body).toContain("Provide a secret")
+    expect(r.body).toContain("Your agent needs a secret")
     expect(r.body).toContain("API_KEY")
     expect(r.body).toContain(s.token + "/submit")
   })
