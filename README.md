@@ -1,20 +1,20 @@
-<div align="center">
-<h1>🔑 keyhole</h1>
+# keyhole
 
-<p>Hand a secret to your AI coding agent without pasting it in the chat</p>
-</div>
+**Stop pasting secrets into your agent.**
+
+Hand your AI coding agent a *reference* — never the value.
+
+![keyhole localhost form](https://raw.githubusercontent.com/maferland/keyhole/main/assets/screenshot.png)
 
 ---
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/maferland/keyhole/main/assets/screenshot.png" width="460" alt="keyhole localhost form">
-</p>
-
 Your agent needs an API key to run a command. Normally you'd paste it into the
 chat — where it lands in the model's context, the transcript, and any logs.
-`keyhole` opens a one-field form on `localhost`, you type the secret there,
-and the value goes straight to a store (macOS Keychain, a file, or an env file).
-The agent gets back **only a reference** — never the value.
+
+`keyhole` opens a one-field form on `localhost`. You type the secret there, and
+the value goes straight to a store (macOS Keychain, a file, or an env file). The
+agent gets back **only a reference** — never the value, never in its context,
+never in the logs.
 
 ## Prerequisites
 
@@ -121,10 +121,16 @@ Where the value lives is independent of how it gets there. Pick with `--dest`:
 
 ## How it works
 
-A localhost-only HTTP server serves the form on a random, unguessable URL path.
-On submit, each value is written directly to the chosen destination and the
-references are printed to stdout. Raw values never touch stdout, are never
-logged, and are never read back by the agent.
+**The agent asks.** It runs `keyhole NAME` instead of asking you to paste a key
+into the chat.
+
+**You type it.** A localhost-only HTTP server serves the form on a random,
+unguessable URL path. On submit, each value is written directly to the chosen
+destination.
+
+**The agent gets a reference.** The references are printed to stdout — a
+one-line `retrieve` command per secret, expanded only at runtime. Raw values
+never touch stdout, are never logged, and are never read back by the agent.
 
 Guards:
 
@@ -142,11 +148,11 @@ chat. See [hooks/README.md](hooks/README.md).
 
 ## Security notes
 
-- `keyhole` keeps the value out of the **agent's context** — that is its
-  job. It is not at-rest encryption. `file:`/`env:` destinations are plaintext
-  on disk (mode `0600`); `keychain` is encrypted at rest.
+- `keyhole` keeps the value out of the **agent's context** — that is its job.
+It is not at-rest encryption. `file:`/`env:` destinations are plaintext on disk
+(mode `0600`); `keychain` is encrypted at rest.
 - The `keychain` destination passes the value on `argv`, briefly visible to
-  `ps` on a multi-user machine. On a shared box prefer `file:` or `env:`.
+`ps` on a multi-user machine. On a shared box prefer `file:` or `env:`.
 
 ## Develop
 
