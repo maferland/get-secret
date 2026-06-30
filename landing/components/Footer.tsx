@@ -11,7 +11,7 @@ export function Footer() {
           </span>
         </div>
         <div className="text-xs text-fa">
-          MIT · runs on Node · no key ever touches stdout
+          MIT · runs on Node · secrets never leave your machine
         </div>
       </div>
     </footer>
