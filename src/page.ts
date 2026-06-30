@@ -72,6 +72,7 @@ const TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
  .dchip.on{background:color-mix(in srgb,var(--ac) 14%,transparent);
    border-color:color-mix(in srgb,var(--ac) 42%,transparent);color:var(--ac);font-weight:600}
  .dchip.dis{opacity:.4;cursor:not-allowed;pointer-events:none}
+ .dest-note{font-size:10.5px;color:var(--fa);margin:-10px 0 16px;text-align:center}
  /* error banner */
  .err{display:none;align-items:flex-start;gap:9px;background:rgba(211,107,94,.08);
    border:1px solid rgba(211,107,94,.25);border-radius:8px;padding:11px 13px;margin-bottom:16px}
@@ -131,6 +132,7 @@ const TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
      <div class="dchip{fl}{fdis}" data-d=file{ftitle}>file</div>
      <div class="dchip{en}" data-d=env>env</div>
     </div>
+    <div class=dest-note id=dest-note></div>
     <div class=err id=err><span class=bang>!</span><span class=txt id=errtxt></span></div>
     <button class=go id=go>{button}</button>
     <div class=cap>localhost only · single-use · value never leaves this machine</div>
@@ -142,11 +144,17 @@ const TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
  const card=document.getElementById('card'),body=document.getElementById('body'),
        go=document.getElementById('go'),errtxt=document.getElementById('errtxt'),
        fields=[...document.querySelectorAll('input[data-name]')],
+       destNote=document.getElementById('dest-note'),
        dest={destJson},multi=fields.length>1;
+ const DEST_DESC={'keychain':'encrypted at rest · macOS Keychain','file':'raw value on disk · mode 0600','env':'NAME=value lines · mode 0600'};
+ function getDestBase(d){return d.split(':')[0];}
+ function updateDestNote(d){if(destNote)destNote.textContent=DEST_DESC[getDestBase(d)]||'';}
+ updateDestNote(dest);
  const logoRow='<div class="logo logo-row center"><span class=mark></span><span class=word>keyhole<b>_</b></span></div>';
  document.querySelectorAll('.dchip:not(.dis)').forEach(c=>c.onclick=()=>{
    document.querySelectorAll('.dchip').forEach(x=>x.classList.remove('on'));
-   c.classList.add('on');});
+   c.classList.add('on');
+   updateDestNote(c.dataset.d);});
  function dead(ringClass,glyph,heading,bodyHtml,noteHtml){
    body.className='body';card.className='card';
    body.innerHTML=logoRow+'<div class=dead>'+
@@ -157,19 +165,21 @@ const TEMPLATE = `<!doctype html><html lang=en><head><meta charset=utf-8>
  function success(){
    const list=multi?fields.map(f=>'<span class=ac>'+f.dataset.name+'</span>').join('\\n'):'';
    const heading=multi?fields.length+' secrets stored.':'Secret stored.';
+   const name=!multi&&fields[0]?fields[0].dataset.name:'';
+   const fullDest=dest==='keychain'&&name?'keychain:'+name:dest;
    dead('ok','✓',heading,
-     'Stored to <span class=ac>'+dest+'</span>.\\nYour agent has what it needs.'+(list?'\\n'+list:''),
-     'The value never touched the agent\\'s context. You can close this tab.');
+     'Stored to <span class=ac>'+fullDest+'</span>.\\nYour agent is unblocked and running.'+(list?'\\n'+list:''),
+     'The value never entered the agent\\'s context. You can close this tab.');
  }
  function already(){
    dead('lock','🔒','Already submitted.',
-     'You already submitted this form. The secret is stored and the agent is running.',
+     'This form has already been used. The secret was stored and the agent is running.',
      'If you think this is wrong, restart the <code>keyhole</code> command in your terminal.');
  }
  function timedOut(){
-   dead('time','⌛','Timed out.',
-     'The agent stopped waiting. The local server is gone.',
-     'Run the command again to get a fresh form. Default is 300 s; pass --timeout to change it.');
+   dead('time','⌛','Session expired.',
+     'The agent timed out waiting for the secret. The server has shut down.',
+     'Run the command again to open a new form. Default timeout: 300 s (--timeout flag).');
  }
  function showError(text){
    card.classList.remove('busy');card.classList.add('err-state');
