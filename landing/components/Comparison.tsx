@@ -12,7 +12,7 @@ export function Comparison() {
                 you: <span className="text-da">sk-live-1a2b3c…</span>
               </div>
               <div className="mt-1.5 text-[10.5px] text-la">
-                ↳ now in the context window, transcript, and every log line
+                ↳ now in the context window, the transcript, and every log line
               </div>
             </div>
             <div className="text-[13px] leading-[1.6] text-mu">
@@ -29,7 +29,7 @@ export function Comparison() {
                 agent: <span className="text-ac">keychain:OPENAI_API_KEY</span>
               </div>
               <div className="mt-1.5 text-[10.5px] text-la">
-                ↳ a reference, expanded only at runtime — value never touched
+                ↳ a reference it expands only at runtime. The value is elsewhere.
               </div>
             </div>
             <div className="text-[13px] leading-[1.6] text-mu">

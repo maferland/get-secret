@@ -5,10 +5,10 @@ const DESTINATIONS = [
 ];
 
 const GUARDS = [
-  { main: "binds 127.0.0.1 only", small: "Host must be loopback" },
-  { main: "random URL token per run", small: "all else 404s" },
-  { main: "rejects cross-origin POSTs", small: null },
-  { main: "single-use", small: "stores once, then 409s" },
+  "binds 127.0.0.1 only · Host must be loopback",
+  "random URL token per run · all else 404s",
+  "rejects cross-origin POSTs",
+  "single-use · stores once, then 409s",
 ];
 
 export function DestinationsGuards() {
@@ -40,20 +40,13 @@ export function DestinationsGuards() {
             </div>
             {GUARDS.map((guard, i) => (
               <div
-                key={guard.main}
+                key={guard}
                 className={`flex gap-3 py-2 text-[12.5px] leading-[1.5] ${
                   i < GUARDS.length - 1 ? "border-b border-b06" : ""
                 }`}
               >
                 <span className="flex-none text-ac">✓</span>
-                <span className="text-mu">
-                  {guard.main}
-                  {guard.small && (
-                    <small className="block text-[11px] text-fa">
-                      {guard.small}
-                    </small>
-                  )}
-                </span>
+                <span className="text-mu">{guard}</span>
               </div>
             ))}
           </div>

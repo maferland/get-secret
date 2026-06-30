@@ -13,6 +13,10 @@ export function Demo() {
   return (
     <section className="animate-kh-up pt-[46px] pb-[30px]">
       <div className="mx-auto max-w-[1140px] px-7">
+        <div className="mb-3 grid grid-cols-2 gap-[22px] max-[760px]:grid-cols-1 max-[760px]:gap-1">
+          <div className="text-[11px] tracking-[0.16em] text-la uppercase">You — on localhost</div>
+          <div className="text-[11px] tracking-[0.16em] text-la uppercase max-[760px]:hidden">Your agent — all it ever sees</div>
+        </div>
         <div className="grid grid-cols-2 items-start gap-[22px] max-[760px]:grid-cols-1 max-[760px]:gap-4">
           <div className="group flex flex-col overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--ac)_24%,transparent)] bg-sf transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-[3px] hover:border-[color-mix(in_srgb,var(--ac)_38%,transparent)] hover:shadow-[0_18px_50px_color-mix(in_srgb,var(--ac)_18%,transparent)]">
             <div className="flex items-center border-b border-b06 bg-tb px-3.5 py-2.5">
