@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+echo "keyhole pre-commit: tsc…"
+bunx tsc --noEmit
+echo "keyhole pre-commit: prettier…"
+bunx prettier --check .
+echo "keyhole pre-commit: tests…"
+bun run test
