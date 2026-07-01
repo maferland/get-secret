@@ -1,29 +1,21 @@
 # keyhole
 
-**Stop pasting secrets into your agent.**
-
-Hand your AI coding agent a _reference_ — never the value.
+Stop pasting secrets into your agent.
 
 ![keyhole localhost form](https://raw.githubusercontent.com/maferland/keyhole/main/assets/form.png)
 
 ---
 
-Your agent needs an API key to run a command. Normally you'd paste it into the
-chat — where it lands in the model's context, the transcript, and any logs.
-
-`keyhole` opens a one-field form on `localhost`. You type the secret there, and
-the value goes straight to a store (macOS Keychain, a file, or an env file). The
-agent gets back **only a reference** — never the value, never in its context,
-never in the logs.
+Your agent needs an API key. Normally you'd paste it into the chat, where it lands in the model's context, the transcript, and every log. `keyhole` opens a form on `localhost` instead. You type the secret there; keyhole writes it to a store (macOS Keychain, a file, or an env file) and hands the agent back a retrieve reference. The value never touches the chat.
 
 ## Prerequisites
 
-- Node 18+ — the CLI and the Claude/Codex plugin all run on node. [Bun](https://bun.sh) is only needed to develop or build from source.
+- Node 18+. The CLI and the Claude/Codex plugin both run on Node. [Bun](https://bun.sh) is only needed to build from source.
 - macOS for the `keychain` destination; `file:`/`env:` work anywhere.
 
 ## Install
 
-As a Claude Code plugin (no clone):
+As a Claude Code plugin:
 
 ```bash
 claude plugin add github:maferland/keyhole
@@ -33,10 +25,10 @@ As a CLI via npm:
 
 ```bash
 npx @maferland/keyhole OPENAI_API_KEY --context '...'   # run without installing
-npm install -g @maferland/keyhole                        # or install once, then: keyhole ...
+npm install -g @maferland/keyhole                        # install once, then: keyhole ...
 ```
 
-From source (contributors):
+From source:
 
 ```bash
 git clone https://github.com/maferland/keyhole && cd keyhole && bun link
@@ -44,26 +36,24 @@ git clone https://github.com/maferland/keyhole && cd keyhole && bun link
 
 ### Other agents (Codex, etc.)
 
-keyhole is just a CLI, so any agent that can run shell commands can use it.
+keyhole is a CLI, so any agent that can run shell commands can use it.
 
-1. Install the CLI so the agent's shell can reach it:
+1. Install it so the agent's shell can reach it:
 
    ```bash
    npm install -g @maferland/keyhole
    ```
 
-2. Teach the agent to prefer it. Codex mirrors Claude — drop a skill into
-   `~/.codex/skills/keyhole/SKILL.md` (see [skills/keyhole](skills/keyhole/SKILL.md),
-   invoking the `keyhole` command directly). For any other agent, add a line to
+2. For Codex, drop a skill into `~/.codex/skills/keyhole/SKILL.md` (see
+   [skills/keyhole](skills/keyhole/SKILL.md)). For any other agent, add a line to
    its instructions (`AGENTS.md`, system prompt):
 
-   > To collect a secret, run `keyhole <NAME> --context '<what it is for>'` (pass
-   > several names for several secrets). Use the returned `retrieve` reference and
+   > To collect a secret, run `keyhole <NAME> --context '<what it is for>'`. Pass
+   > several names for several secrets. Use the returned `retrieve` reference and
    > never ask the user to paste a secret into the chat.
 
-3. Optional — if the agent supports Stop hooks (Codex: `~/.codex/hooks.json`),
-   wire up the nudge hook from [hooks/README.md](hooks/README.md) to catch slips
-   automatically.
+3. If the agent supports Stop hooks (Codex: `~/.codex/hooks.json`), the nudge hook
+   in [hooks/README.md](hooks/README.md) will catch slips automatically.
 
 ## Usage
 
@@ -77,8 +67,7 @@ Pass several names for one form with a field per secret:
 keyhole OPENAI_API_KEY ANTHROPIC_API_KEY --dest env:./.env.local
 ```
 
-The command opens the form, **blocks** until you click **Store**, then prints
-one JSON line on **stdout** — the references, with no secret values:
+The command opens the form, blocks until you click Store, then prints one JSON line on stdout:
 
 ```json
 {
@@ -93,16 +82,13 @@ one JSON line on **stdout** — the references, with no secret values:
 }
 ```
 
-Use each secret by expanding its `retrieve` reference at runtime, so the value
-is never captured:
+Expand the `retrieve` reference at runtime so the value is never captured:
 
 ```bash
 curl -H "Authorization: Bearer $(security find-generic-password -s OPENAI_API_KEY -a $USER -w)" ...
 ```
 
 ### Destinations
-
-Where the value lives is independent of how it gets there. Pick with `--dest`:
 
 | `--dest`              | Stored as                               | Multiple secrets |
 | --------------------- | --------------------------------------- | ---------------- |
@@ -121,20 +107,14 @@ Where the value lives is independent of how it gets there. Pick with `--dest`:
 
 ## How it works
 
-**The agent asks.** It runs `keyhole NAME` instead of asking you to paste a key
-into the chat.
-
-**You type it.** A localhost-only HTTP server serves the form on a random,
-unguessable URL path. On submit, each value is written directly to the chosen
-destination.
-
-**The agent gets a reference.** The references are printed to stdout — a
-one-line `retrieve` command per secret, expanded only at runtime. Raw values
-never touch stdout, are never logged, and are never read back by the agent.
+keyhole starts a localhost HTTP server and opens the form at a random unguessable
+URL. On submit, it writes each value to the chosen destination and prints the
+retrieve references to stdout. The values never touch stdout, never appear in
+logs, and are never read back by the agent.
 
 Guards:
 
-- binds `127.0.0.1` only; `Host` must be loopback on the chosen port (defeats DNS-rebinding)
+- binds `127.0.0.1` only; `Host` must be loopback (defeats DNS-rebinding)
 - random URL token per run; any other path 404s
 - rejects cross-origin POSTs
 - single-use: stores once, then 409s further submits
@@ -142,17 +122,16 @@ Guards:
 
 ## Optional hook
 
-Want the agent to reach for keyhole on its own? An opt-in `Stop` hook nudges it
-to use keyhole whenever it tries to ask the user to paste a secret into the
-chat. See [hooks/README.md](hooks/README.md).
+The Stop hook in [hooks/README.md](hooks/README.md) makes the agent reach for
+keyhole automatically whenever it would otherwise ask you to paste a secret.
 
 ## Security notes
 
-- `keyhole` keeps the value out of the **agent's context** — that is its job.
-  It is not at-rest encryption. `file:`/`env:` destinations are plaintext on disk
-  (mode `0600`); `keychain` is encrypted at rest.
-- The `keychain` destination passes the value on `argv`, briefly visible to
-  `ps` on a multi-user machine. On a shared box prefer `file:` or `env:`.
+- keyhole keeps the value out of the agent's context. It is not at-rest
+  encryption. `file:`/`env:` destinations are plaintext on disk (mode `0600`);
+  `keychain` is encrypted at rest.
+- The `keychain` destination passes the value on `argv`, briefly visible to `ps`
+  on a multi-user machine. On a shared box prefer `file:` or `env:`.
 
 ## Develop
 
