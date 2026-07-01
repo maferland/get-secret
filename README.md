@@ -4,7 +4,7 @@
 
 Hand your AI coding agent a _reference_ — never the value.
 
-![keyhole localhost form](https://raw.githubusercontent.com/maferland/keyhole/main/assets/screenshot.png)
+![keyhole localhost form](https://raw.githubusercontent.com/maferland/keyhole/main/assets/form.png)
 
 ---
 
